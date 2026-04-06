@@ -1,89 +1,77 @@
 package com.oracle.OSfacil.service;
 
-
-import com.oracle.OSfacil.dto.OrdemServicoDTO;
+import com.oracle.OSfacil.dto.request.OrdemServicoDTO;
+import com.oracle.OSfacil.dto.response.OrdemServicoResponseDTO;
+import com.oracle.OSfacil.enums.StatusOrdemServico;
+import com.oracle.OSfacil.enums.StatusPagamento;
+import com.oracle.OSfacil.mapper.OrdemServicoMapper;
 import com.oracle.OSfacil.model.Cliente;
 import com.oracle.OSfacil.model.OrdemServico;
 import com.oracle.OSfacil.repository.ClienteRepository;
 import com.oracle.OSfacil.repository.OrdemServicoRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
 public class OrdemServicoService {
+
     private final OrdemServicoRepository ordemServicoRepository;
     private final ClienteRepository clienteRepository;
+    private final OrdemServicoMapper ordemServicoMapper;
 
-     private OrdemServicoDTO toDTO(OrdemServico ordemServico) {
-         OrdemServicoDTO ordemServicoDTO = new OrdemServicoDTO();
-         ordemServicoDTO.setId(ordemServico.getId());
-         ordemServicoDTO.setDescricao(ordemServico.getDescricao());
-         ordemServicoDTO.setValor(ordemServico.getValor());
-         ordemServicoDTO.setStatus(ordemServico.getStatus());
-         ordemServicoDTO.setStatusPagamento(ordemServico.getStatusPagamento());
-         ordemServicoDTO.setClienteId(ordemServico.getCliente() !=null?ordemServico.getCliente().getId():null);
-         return ordemServicoDTO;
-     }
-     private OrdemServico toEntity(OrdemServicoDTO ordemServicoDTO) {
-         OrdemServico ordemServico = new OrdemServico();
-         ordemServico.setId(ordemServicoDTO.getId());
-         ordemServico.setDescricao(ordemServicoDTO.getDescricao());
-         ordemServico.setValor(ordemServicoDTO.getValor());
-         ordemServico.setStatus(ordemServicoDTO.getStatus());
-         ordemServico.setStatusPagamento(ordemServicoDTO.getStatusPagamento());
-         if(ordemServicoDTO.getClienteId()!=null){
-             Cliente cliente = clienteRepository.findById(ordemServicoDTO.getClienteId())
-                     .orElseThrow(()->new RuntimeException("cliente nao encontrado"));
-             ordemServico.setCliente(cliente);
-         }else{
-             ordemServico.setCliente(null);
-         }
-         return ordemServico;
-     }
+    @Transactional
+    public OrdemServicoResponseDTO criar(OrdemServicoDTO dto) {
+        Cliente cliente = clienteRepository.findById(dto.getClienteId())
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado com id: " + dto.getClienteId()));
 
-     public OrdemServicoDTO ciar(OrdemServicoDTO ordemServicoDTO) {
-        OrdemServico ordemServico = toEntity(ordemServicoDTO);
-        OrdemServico salvo = ordemServicoRepository.save(ordemServico);
-        return toDTO(salvo);
-     }
+        OrdemServico ordemServico = ordemServicoMapper.toEntity(dto);
+        ordemServico.setCliente(cliente);
+        ordemServico.setStatusOrdemServico(StatusOrdemServico.ABERTA);
+        ordemServico.setStatusPagamento(StatusPagamento.PENDENTE);
 
-     public void deletar(Long id) {
-         OrdemServico ordemServico = ordemServicoRepository.findById(id)
-                 .orElseThrow(()->new RuntimeException("ordemServico nao encontrado"));
-         ordemServicoRepository.delete(ordemServico);
-     }
+        return ordemServicoMapper.toResponseDTO(ordemServicoRepository.save(ordemServico));
+    }
 
-     public OrdemServicoDTO buscar(Long id) {
-         OrdemServico ordemServico = ordemServicoRepository.findById(id)
-                 .orElseThrow(()->new RuntimeException("ordemServico nao encontrado"));
-         return toDTO(ordemServico);
-     }
-     public List<OrdemServicoDTO> listarTodos() {
-         return ordemServicoRepository.findAll()
-                 .stream()
-                 .map(this::toDTO)
-                 .collect(Collectors.toList());
-     }
+    @Transactional
+    public OrdemServicoResponseDTO atualizar(OrdemServicoDTO dto, Long id) {
+        OrdemServico ordemServico = buscarPorId(id);
 
-     public OrdemServicoDTO atualizar(OrdemServicoDTO ordemServicoDTO,Long id) {
-         OrdemServico ordemServico = ordemServicoRepository.findById(id)
-                 .orElseThrow(()->new RuntimeException("ordemServico nao encontrado"));
-         ordemServico.setValor(ordemServicoDTO.getValor());
-         ordemServico.setStatusPagamento(ordemServicoDTO.getStatusPagamento());
-         ordemServico.setStatus(ordemServicoDTO.getStatus());
-         ordemServico.setDescricao(ordemServicoDTO.getDescricao());
-         Cliente cliente = clienteRepository.findById(ordemServicoDTO.getClienteId())
-                 .orElseThrow(()->new RuntimeException("cliente nao encontrado"));
-         ordemServico.setCliente(cliente);
+        Cliente cliente = clienteRepository.findById(dto.getClienteId())
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado com id: " + dto.getClienteId()));
 
-         OrdemServico atualizado = ordemServicoRepository.save(ordemServico);
-         return toDTO(atualizado);
+        ordemServico.setCliente(cliente);
+        ordemServico.setValor(dto.getValor());
+        ordemServico.setDescricao(dto.getDescricao());
+        ordemServico.setStatusPagamento(dto.getStatusPagamento());
+        ordemServico.setStatusOrdemServico(dto.getStatusOrdemServico());
 
-     }
+        return ordemServicoMapper.toResponseDTO(ordemServicoRepository.save(ordemServico));
+    }
 
+    @Transactional(readOnly = true)
+    public OrdemServicoResponseDTO buscar(Long id) {
+        return ordemServicoMapper.toResponseDTO(buscarPorId(id));
+    }
 
+    @Transactional(readOnly = true)
+    public List<OrdemServicoResponseDTO> listarTodos() {
+        return ordemServicoRepository.findAll()
+                .stream()
+                .map(ordemServicoMapper::toResponseDTO)
+                .toList();
+    }
+
+    @Transactional
+    public void deletar(Long id) {
+        ordemServicoRepository.delete(buscarPorId(id));
+    }
+
+    private OrdemServico buscarPorId(Long id) {
+        return ordemServicoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id: " + id));
+    }
 }

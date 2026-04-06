@@ -1,8 +1,10 @@
 spring:
   application:
     name: nextgate
+
   hateoas:
     use-hal-as-default-json-media-type: false
+
   datasource:
     url: ${DATABASE_URL}
     username: ${DATABASE_USERNAME}
@@ -11,25 +13,38 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
-    defer-datasource-initialization: true
+      ddl-auto: validate
+    defer-datasource-initialization: false
     database-platform: org.hibernate.dialect.OracleDialect
-    show-sql: true  # To show SQL queries in the console (optional)
-    open-in-view: false  # Best practice to disable Open Session in View pattern
+    show-sql: true
+    open-in-view: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
+
+
+
   devtools:
     restart:
       enabled: true
+
+server:
+  port: 8080
+
 logging:
   level:
     root: INFO
     br: DEBUG
     org:
       hibernate:
-        SQL: DEBUG         # Ativa o log das SQL queries
+        SQL: DEBUG
         type:
           descriptor:
             sql:
-              BasicBinder: TRACE  # Mostra parâmetros das queries
+              BasicBinder: TRACE
 
 springdoc:
   hal:

@@ -1,10 +1,8 @@
-package com.oracle.OSfacil.dto;
+package com.oracle.OSfacil.dto.request;
 
 
-import com.oracle.OSfacil.enums.Status;
+import com.oracle.OSfacil.enums.StatusOrdemServico;
 import com.oracle.OSfacil.enums.StatusPagamento;
-import com.oracle.OSfacil.model.Cliente;
-import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -14,11 +12,10 @@ import java.math.BigDecimal;
 
 @Data
 public class OrdemServicoDTO {
-    private Long id;
     @NotNull(message = "O Id do cliente não pode ser vazio")
     private Long clienteId;
     @NotNull(message = "O status do serviço não pode ser vazio")
-    private Status status;
+    private StatusOrdemServico statusOrdemServico;
     @NotBlank(message = "A descrição não pode ser vazio")
     private String descricao;
     @NotNull(message = "O status do pagamento não pode ser vazio ")

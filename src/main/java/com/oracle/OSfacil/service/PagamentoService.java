@@ -1,17 +1,17 @@
 package com.oracle.OSfacil.service;
 
-
-import com.oracle.OSfacil.dto.PagamentoDTO;
+import com.oracle.OSfacil.dto.request.PagamentoDTO;
+import com.oracle.OSfacil.dto.response.PagamentoResponseDTO;
+import com.oracle.OSfacil.mapper.PagamentoMapper;
 import com.oracle.OSfacil.model.Cliente;
 import com.oracle.OSfacil.model.Pagamento;
 import com.oracle.OSfacil.repository.ClienteRepository;
 import com.oracle.OSfacil.repository.PagamentoRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.awt.image.TileObserver;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
@@ -19,64 +19,49 @@ public class PagamentoService {
 
     private final PagamentoRepository pagamentoRepository;
     private final ClienteRepository clienteRepository;
+    private final PagamentoMapper pagamentoMapper;
 
-    private PagamentoDTO toDTO(Pagamento pagamento) {
-        PagamentoDTO dto = new PagamentoDTO();
-        dto.setId(pagamento.getId());
-        dto.setFormaPagamento(pagamento.getFormaPagamento());
-        dto.setValor(pagamento.getValor());
-        dto.setClienteId(pagamento.getCliente() !=null ? pagamento.getCliente().getId() :null);
-        return dto;
+    @Transactional
+    public PagamentoResponseDTO criar(PagamentoDTO dto, Cliente logado) {
+        Pagamento pagamento = pagamentoMapper.toEntity(dto);
+        pagamento.setCliente(logado);
+        return pagamentoMapper.toResponseDTO(pagamentoRepository.save(pagamento));
     }
-    private Pagamento toEntity(PagamentoDTO dto) {
-        Pagamento pagamento = new Pagamento();
-        pagamento.setId(dto.getId());
-        pagamento.setFormaPagamento(dto.getFormaPagamento());
-        pagamento.setValor(dto.getValor());
-        if (dto.getClienteId() != null) {
-            Cliente cliente = clienteRepository.findById(dto.getClienteId())
-                    .orElseThrow(()->new RuntimeException("cliente nao encontrado"));
-            pagamento.setCliente(cliente);
-        }else{
-            pagamento.setCliente(null);
+
+    @Transactional
+    public PagamentoResponseDTO atualizar(Long id, PagamentoDTO dto, Cliente logado) {
+        Pagamento pagamento = buscarPorId(id);
+
+        if (!pagamento.getCliente().getId().equals(logado.getId())) {
+            throw new RuntimeException("Você não tem permissão para alterar este pagamento");
         }
-        return pagamento;
 
-    }
-    public PagamentoDTO criar(PagamentoDTO dto) {
-        Pagamento pagamento = toEntity(dto);
-        Pagamento salvo =  pagamentoRepository.save(pagamento);
-        return toDTO(salvo);
-    }
-    public void deletar(Long id){
-        Pagamento pagamento = pagamentoRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("pagamento nao encontrado"));
-        pagamentoRepository.delete(pagamento);
-
-    }
-    public PagamentoDTO atualizar (Long id, PagamentoDTO dto) {
-        Pagamento pagamento = pagamentoRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("pagamento nao encontrado"));
         pagamento.setFormaPagamento(dto.getFormaPagamento());
         pagamento.setValor(dto.getValor());
-        Cliente cliente = clienteRepository.findById(dto.getClienteId())
-                .orElseThrow(()->new RuntimeException("cliente nao encontrado"));
-        pagamento.setCliente(cliente);
-
-        Pagamento atualizado = pagamentoRepository.save(pagamento);
-        return toDTO(atualizado);
+        return pagamentoMapper.toResponseDTO(pagamentoRepository.save(pagamento));
     }
 
-    public List<PagamentoDTO> listarTodos(){
+    @Transactional
+    public void deletar(Long id) {
+        buscarPorId(id);
+        pagamentoRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<PagamentoResponseDTO> listarTodos() {
         return pagamentoRepository.findAll()
                 .stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+                .map(pagamentoMapper::toResponseDTO)
+                .toList();
     }
-    public PagamentoDTO buscar(Long id){
-        Pagamento pagamento =  pagamentoRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("Pagamento nao encontrado"));
-        return toDTO(pagamento);
 
+    @Transactional(readOnly = true)
+    public PagamentoResponseDTO buscar(Long id) {
+        return pagamentoMapper.toResponseDTO(buscarPorId(id));
+    }
+
+    private Pagamento buscarPorId(Long id) {
+        return pagamentoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Pagamento não encontrado com id: " + id));
     }
 }

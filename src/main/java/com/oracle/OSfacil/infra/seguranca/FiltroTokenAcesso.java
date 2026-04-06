@@ -7,6 +7,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.context.ApplicationContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,31 +20,29 @@ import java.io.IOException;
 
 @Component
 public class FiltroTokenAcesso extends OncePerRequestFilter {
+
     private final TokenService tokenService;
     private final ClienteRepository clienteRepository;
 
-    public FiltroTokenAcesso(TokenService tokenService, ClienteRepository clienteRepository) {
+    public FiltroTokenAcesso(TokenService tokenService, @Lazy ClienteRepository clienteRepository) {
         this.tokenService = tokenService;
         this.clienteRepository = clienteRepository;
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
-        String path = request.getServletPath();
-        if(path.startsWith("/v3/api-docs") || path.startsWith("/swagger-ui")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        //recuperar o token da requisição
         String token = recuperarTokenRequisicao(request);
 
-        if(token != null){
+        if (token != null) {
             String email = tokenService.verificarToken(token);
-            Cliente cliente = clienteRepository.findByEmailIgnoreCase(email).orElseThrow();
 
-            Authentication authentication = new UsernamePasswordAuthenticationToken(cliente, null, cliente.getAuthorities());
+            var cliente = clienteRepository.findByEmailIgnoreCase(email)
+                    .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+            var authentication = new UsernamePasswordAuthenticationToken(
+                    cliente, null, cliente.getAuthorities());
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
@@ -50,11 +50,7 @@ public class FiltroTokenAcesso extends OncePerRequestFilter {
     }
 
     private String recuperarTokenRequisicao(HttpServletRequest request) {
-        var authorizationHeader = request.getHeader("Authorization");
-        if(authorizationHeader != null){
-            return authorizationHeader.replace("Bearer ", "");
-        }
-        return null;
+        var authHeader = request.getHeader("Authorization");
+        return (authHeader != null) ? authHeader.replace("Bearer ", "") : null;
     }
-
 }

@@ -1,7 +1,9 @@
 package com.oracle.OSfacil.service;
 
 
-import com.oracle.OSfacil.dto.ItemProdutoDTO;
+import com.oracle.OSfacil.dto.request.ItemProdutoDTO;
+import com.oracle.OSfacil.dto.response.ItemProdutoResponseDTO;
+import com.oracle.OSfacil.mapper.ItemProdutoMapper;
 import com.oracle.OSfacil.model.ItemProduto;
 import com.oracle.OSfacil.model.OrdemServico;
 import com.oracle.OSfacil.model.Produto;
@@ -10,107 +12,84 @@ import com.oracle.OSfacil.repository.OrdemServicoRepository;
 import com.oracle.OSfacil.repository.ProdutoRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
 public class ItemProdutoService {
-    private ItemProdutoRepository itemProdutoRepository;
-    private OrdemServicoRepository ordemServicoRepository;
-    private ProdutoRepository produtoRepository;
 
-    private ItemProdutoDTO toDto(ItemProduto itemProduto) {
-        ItemProdutoDTO itemProdutoDTO = new ItemProdutoDTO();
-        itemProdutoDTO.setId(itemProduto.getId());
-        itemProdutoDTO.setSubtotal(itemProduto.getSubtotal());
-        itemProdutoDTO.setQuantidade(itemProduto.getQuantidade());
-        itemProdutoDTO.setValorUnitario(itemProduto.getValorUnitario());
-        if(itemProdutoDTO.getProdutoId()!=null){
-            Produto produto = produtoRepository.findById(itemProdutoDTO.getProdutoId())
-                    .orElseThrow(()->new RuntimeException("produto nao encontrado"));
-            itemProdutoDTO.setProdutoId(produto.getId());
-        }else {
-            itemProdutoDTO.setProdutoId(null);
-        }
+    private final ItemProdutoRepository itemProdutoRepository;
+    private final ProdutoRepository produtoRepository;
+    private final OrdemServicoRepository ordemServicoRepository;
+    private final ItemProdutoMapper itemProdutoMapper;
 
-        if(itemProdutoDTO.getOrdemServicoId()!=null){
-            OrdemServico ordemServico = ordemServicoRepository.findById(itemProdutoDTO.getOrdemServicoId())
-                    .orElseThrow(()->new RuntimeException("ordemServico nao encontrado"));
-            itemProdutoDTO.setOrdemServicoId(ordemServico.getId());
-        }else {
-            itemProdutoDTO.setOrdemServicoId(null);
-        }
-        return itemProdutoDTO;
-    }
-    private ItemProduto toEntity(ItemProdutoDTO itemProdutoDTO) {
-        ItemProduto itemProduto = new ItemProduto();
-        itemProduto.setId(itemProdutoDTO.getId());
-        itemProduto.setSubtotal(itemProdutoDTO.getSubtotal());
-        itemProduto.setQuantidade(itemProdutoDTO.getQuantidade());
-        itemProduto.setValorUnitario(itemProdutoDTO.getValorUnitario());
-        if(itemProdutoDTO.getProdutoId()!=null){
-            Produto produto = produtoRepository.findById(itemProdutoDTO.getProdutoId())
-                    .orElseThrow(()->new RuntimeException("produto nao encontrado"));
-            itemProduto.setProduto(produto);
-        }else{
-            itemProduto.setProduto(null);
-        }
-        if(itemProdutoDTO.getOrdemServicoId()!=null){
-            OrdemServico ordemServico = ordemServicoRepository.findById(itemProdutoDTO.getOrdemServicoId())
-                    .orElseThrow(()->new RuntimeException("ordemServico nao encontrado"));
-            itemProduto.setOrdemServico(ordemServico);
-        }else{
-            itemProduto.setOrdemServico(null);
-        }
-        return itemProduto;
+    @Transactional
+    public ItemProdutoResponseDTO criar(ItemProdutoDTO dto) {
+        Produto produto = produtoRepository.findById(dto.getProdutoId())
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + dto.getProdutoId()));
+
+        OrdemServico ordemServico = ordemServicoRepository.findById(dto.getOrdemServicoId())
+                .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id: " + dto.getOrdemServicoId()));
+
+        ItemProduto itemProduto = itemProdutoMapper.toEntity(dto);
+        itemProduto.setProduto(produto);
+        itemProduto.setOrdemServico(ordemServico);
+        itemProduto.setSubtotal(calcularSubtotal(dto.getValorUnitario(), dto.getQuantidade()));
+
+        return itemProdutoMapper.toResponseDTO(itemProdutoRepository.save(itemProduto));
     }
 
-    public ItemProdutoDTO criar(ItemProdutoDTO itemProdutoDTO) {
-        ItemProduto itemProduto = toEntity(itemProdutoDTO);
-        ItemProduto salvo = itemProdutoRepository.save(itemProduto);
-        return toDto(salvo);
+    @Transactional(readOnly = true)
+    public ItemProdutoResponseDTO buscar(Long id) {
+        return itemProdutoMapper.toResponseDTO(buscarPorId(id));
     }
-    public void deletar(Long id) {
-        ItemProduto itemProduto = itemProdutoRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("item produto nao encontrado"));
-        itemProdutoRepository.delete(itemProduto);
-    }
-    public List<ItemProdutoDTO> listarTodos(){
+
+    @Transactional(readOnly = true)
+    public List<ItemProdutoResponseDTO> listarTodos() {
         return itemProdutoRepository.findAll()
                 .stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+                .map(itemProdutoMapper::toResponseDTO)
+                .toList();
     }
-    public ItemProdutoDTO buscar(Long id) {
-        ItemProduto itemProduto = itemProdutoRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("item produto nao encontrado"));
-        return toDto(itemProduto);
-    }
-    public ItemProdutoDTO atualizar(Long id, ItemProdutoDTO itemProdutoDTO) {
-        ItemProduto itemProduto = itemProdutoRepository.findById(id)
-                        .orElseThrow(()->new RuntimeException("item produto nao encontrado"));
-        itemProduto.setSubtotal(itemProdutoDTO.getSubtotal());
-        itemProduto.setQuantidade(itemProdutoDTO.getQuantidade());
-        itemProduto.setValorUnitario(itemProdutoDTO.getValorUnitario());
-        if (itemProdutoDTO.getProdutoId() != null) {
-            Produto produto = produtoRepository.findById(itemProdutoDTO.getProdutoId())
-                    .orElseThrow(() -> new RuntimeException("produto nao encontrado"));
-            itemProduto.setProduto(produto);
-        } else {
-            itemProduto.setProduto(null);
-        }
-        if (itemProdutoDTO.getOrdemServicoId() != null) {
-            OrdemServico ordemServico = ordemServicoRepository.findById(itemProdutoDTO.getOrdemServicoId())
-                    .orElseThrow(() -> new RuntimeException("ordemServico nao encontrado"));
-            itemProduto.setOrdemServico(ordemServico);
-        } else {
-            itemProduto.setOrdemServico(null);
-        }
-        ItemProduto atualizado = itemProdutoRepository.save(itemProduto);
-        return toDto(atualizado);
 
+    @Transactional
+    public ItemProdutoResponseDTO atualizar(Long id, ItemProdutoDTO dto) {
+        ItemProduto itemProduto = buscarPorId(id);
+
+        Produto produto = produtoRepository.findById(dto.getProdutoId())
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + dto.getProdutoId()));
+
+        OrdemServico ordemServico = ordemServicoRepository.findById(dto.getOrdemServicoId())
+                .orElseThrow(() -> new RuntimeException("Ordem de serviço não encontrada com id: " + dto.getOrdemServicoId()));
+
+        itemProduto.setProduto(produto);
+        itemProduto.setOrdemServico(ordemServico);
+        itemProduto.setQuantidade(dto.getQuantidade());
+        itemProduto.setValorUnitario(dto.getValorUnitario());
+        itemProduto.setSubtotal(calcularSubtotal(dto.getValorUnitario(), dto.getQuantidade()));
+
+        return itemProdutoMapper.toResponseDTO(itemProdutoRepository.save(itemProduto));
+    }
+
+    @Transactional
+    public void deletar(Long id) {
+        itemProdutoRepository.delete(buscarPorId(id));
+    }
+
+    private ItemProduto buscarPorId(Long id) {
+        return itemProdutoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Item produto não encontrado com id: " + id));
+    }
+
+    private BigDecimal calcularSubtotal(BigDecimal valorUnitario, Integer quantidade) {
+        if (valorUnitario == null || quantidade == null) {
+            throw new RuntimeException("Valor unitário e quantidade são obrigatórios para calcular o subtotal");
+        }
+        return valorUnitario.multiply(BigDecimal.valueOf(quantidade));
     }
 }
 

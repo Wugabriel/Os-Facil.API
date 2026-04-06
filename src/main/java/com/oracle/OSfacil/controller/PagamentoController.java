@@ -1,23 +1,23 @@
 package com.oracle.OSfacil.controller;
 
 
-import com.oracle.OSfacil.dto.PagamentoDTO;
+import com.oracle.OSfacil.dto.request.PagamentoDTO;
+import com.oracle.OSfacil.dto.response.PagamentoResponseDTO;
+import com.oracle.OSfacil.model.Cliente;
 import com.oracle.OSfacil.service.PagamentoService;
 import jakarta.validation.Valid;
-import jakarta.websocket.server.PathParam;
 import lombok.AllArgsConstructor;
-import org.apache.coyote.Response;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.List;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
-
-
 
 @RestController
 @RequestMapping("/pagamentos")
@@ -26,64 +26,66 @@ public class PagamentoController {
 
     private final PagamentoService pagamentoService;
 
-
     @PostMapping
-    public ResponseEntity<EntityModel<PagamentoDTO>>criar(@Valid @RequestBody PagamentoDTO dto){
-        PagamentoDTO pagamentoNovo = pagamentoService.criar(dto);
+    public ResponseEntity<EntityModel<PagamentoResponseDTO>> criar(
+            @Valid @RequestBody PagamentoDTO dto,
+            @AuthenticationPrincipal Cliente logado) {
 
-        EntityModel<PagamentoDTO> resource = EntityModel.of(pagamentoNovo,
+        PagamentoResponseDTO pagamentoNovo = pagamentoService.criar(dto, logado);
+
+        EntityModel<PagamentoResponseDTO> resource = EntityModel.of(pagamentoNovo,
                 linkTo(methodOn(PagamentoController.class).buscar(pagamentoNovo.getId())).withSelfRel(),
-                linkTo(methodOn(PagamentoController.class).atualizar(pagamentoNovo.getId(), dto)).withRel("atualizar"),
-                linkTo(methodOn(PagamentoController.class).deletar(pagamentoNovo.getId())).withRel("deletar")
+                linkTo(methodOn(PagamentoController.class).atualizar(pagamentoNovo.getId(), null, null)).withRel("atualizar"),
+                linkTo(methodOn(PagamentoController.class).deletar(pagamentoNovo.getId())).withRel("deletar"),
+                linkTo(methodOn(PagamentoController.class).listarTodos()).withRel("todos-pagamentos")
         );
 
-        return ResponseEntity.ok(resource);
+        URI uri = linkTo(methodOn(PagamentoController.class).buscar(pagamentoNovo.getId())).toUri();
+        return ResponseEntity.created(uri).body(resource);
     }
 
-
     @GetMapping
-    public ResponseEntity<CollectionModel<EntityModel<PagamentoDTO>>> listarTodos() {
-        List<EntityModel<PagamentoDTO>> pagamentos = pagamentoService.listarTodos().stream()
+    public ResponseEntity<CollectionModel<EntityModel<PagamentoResponseDTO>>> listarTodos() {
+
+        List<EntityModel<PagamentoResponseDTO>> pagamentos = pagamentoService.listarTodos()
+                .stream()
                 .map(p -> EntityModel.of(p,
                         linkTo(methodOn(PagamentoController.class).buscar(p.getId())).withSelfRel(),
-                        linkTo(methodOn(PagamentoController.class).atualizar(p.getId(), p)).withRel("atualizar"),
+                        linkTo(methodOn(PagamentoController.class).atualizar(p.getId(), null, null)).withRel("atualizar"),
                         linkTo(methodOn(PagamentoController.class).deletar(p.getId())).withRel("deletar")
                 ))
                 .toList();
 
-        CollectionModel<EntityModel<PagamentoDTO>> collection = CollectionModel.of(pagamentos,
-                linkTo(methodOn(PagamentoController.class).listarTodos()).withSelfRel());
-
-        return ResponseEntity.ok(collection);
+        return ResponseEntity.ok(CollectionModel.of(pagamentos,
+                linkTo(methodOn(PagamentoController.class).listarTodos()).withSelfRel()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<EntityModel<PagamentoDTO>> buscar(@PathVariable Long id) {
-        PagamentoDTO pagamento = pagamentoService.buscar(id);
+    public ResponseEntity<EntityModel<PagamentoResponseDTO>> buscar(@PathVariable Long id) {
 
-        EntityModel<PagamentoDTO> resource = EntityModel.of(pagamento,
+        PagamentoResponseDTO pagamento = pagamentoService.buscar(id);
+
+        return ResponseEntity.ok(EntityModel.of(pagamento,
                 linkTo(methodOn(PagamentoController.class).buscar(id)).withSelfRel(),
-                linkTo(methodOn(PagamentoController.class).atualizar(id, pagamento)).withRel("atualizar"),
-                linkTo(methodOn(PagamentoController.class).deletar(id)).withRel("deletar")
-        );
-
-        return ResponseEntity.ok(resource);
+                linkTo(methodOn(PagamentoController.class).atualizar(id, null, null)).withRel("atualizar"),
+                linkTo(methodOn(PagamentoController.class).deletar(id)).withRel("deletar"),
+                linkTo(methodOn(PagamentoController.class).listarTodos()).withRel("todos-pagamentos")
+        ));
     }
-
 
     @PutMapping("/{id}")
-    public ResponseEntity<EntityModel<PagamentoDTO>> atualizar(@PathVariable Long id, @Valid @RequestBody PagamentoDTO dto) {
-        PagamentoDTO atualizado = pagamentoService.atualizar(id, dto);
+    public ResponseEntity<EntityModel<PagamentoResponseDTO>> atualizar(
+            @PathVariable Long id,
+            @Valid @RequestBody PagamentoDTO dto,
+            @AuthenticationPrincipal Cliente logado) {
 
-        EntityModel<PagamentoDTO> resource = EntityModel.of(atualizado,
+        PagamentoResponseDTO atualizado = pagamentoService.atualizar(id, dto, logado);
+
+        return ResponseEntity.ok(EntityModel.of(atualizado,
                 linkTo(methodOn(PagamentoController.class).buscar(id)).withSelfRel(),
-                linkTo(methodOn(PagamentoController.class).atualizar(id, dto)).withRel("atualizar"),
                 linkTo(methodOn(PagamentoController.class).deletar(id)).withRel("deletar")
-        );
-
-        return ResponseEntity.ok(resource);
+        ));
     }
-
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {

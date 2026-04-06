@@ -10,10 +10,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class OSfacilApplication {
 
 	public static void main(String[] args) {
-        //Dotenv dotenv = Dotenv.load();
-        //dotenv.entries().forEach(entry ->
-        //       System.setProperty(entry.getKey(), entry.getValue())
-       //);
+        Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+        dotenv.entries().forEach(entry ->
+               System.setProperty(entry.getKey(), entry.getValue())
+       );
 		SpringApplication.run(OSfacilApplication.class, args);
 	}
 

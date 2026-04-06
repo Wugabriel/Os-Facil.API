@@ -1,15 +1,11 @@
-package com.oracle.OSfacil.dto;
+package com.oracle.OSfacil.dto.request;
 
-import com.oracle.OSfacil.model.Cliente;
-import jakarta.persistence.Column;
-import jakarta.persistence.ManyToOne;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
 public class VeiculoDTO {
-    private Long id;
     @NotBlank(message = "O modelo do carro não pode ser vazio")
     private String modelo;
     @NotBlank(message = "A cor do carro não pode ser vazio")

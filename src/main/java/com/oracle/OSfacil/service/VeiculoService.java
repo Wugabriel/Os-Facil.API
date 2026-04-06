@@ -1,107 +1,96 @@
 package com.oracle.OSfacil.service;
 
-
-import com.oracle.OSfacil.dto.VeiculoDTO;
+import com.oracle.OSfacil.dto.request.VeiculoDTO;
+import com.oracle.OSfacil.dto.response.VeiculoResponseDTO;
+import com.oracle.OSfacil.mapper.VeiculoMapper;
 import com.oracle.OSfacil.model.Cliente;
 import com.oracle.OSfacil.model.Veiculo;
 import com.oracle.OSfacil.repository.ClienteRepository;
 import com.oracle.OSfacil.repository.VeiculoRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
-@Transactional
 public class VeiculoService {
 
-    private VeiculoRepository veiculoRepository;
-    private ClienteRepository clienteRepository;
+    private final VeiculoRepository veiculoRepository;
+    private final ClienteRepository clienteRepository;
+    private final VeiculoMapper veiculoMapper;
 
-    private VeiculoDTO toDTO(Veiculo veiculo){
-        VeiculoDTO dto = new VeiculoDTO();
-        dto.setId(veiculo.getId());
-        dto.setPlaca(veiculo.getPlaca());
-        dto.setAno(veiculo.getAno());
-        dto.setMarca(veiculo.getMarca());
-        dto.setModelo(veiculo.getModelo());
-        dto.setCor(veiculo.getCor());
-        dto.setClienteId(veiculo.getCliente()!=null?veiculo.getCliente().getId():null);
-        return dto;
-    }
-    private Veiculo toEntity(VeiculoDTO dto){
-        Veiculo veiculo = new Veiculo();
-        veiculo.setPlaca(dto.getPlaca());
-        veiculo.setAno(dto.getAno());
-        veiculo.setMarca(dto.getMarca());
-        veiculo.setModelo(dto.getModelo());
-        veiculo.setCor(dto.getCor());
-        if(dto.getClienteId() != null){
-            Cliente cliente = clienteRepository.findById(dto.getClienteId())
-                    .orElseThrow(()->new RuntimeException("cliente nao encontrado"));
-            veiculo.setCliente(cliente);
-        }else{
-            veiculo.setCliente(null);
-        }
-        return veiculo;
-    }
-    public VeiculoDTO criar (VeiculoDTO dto){
+    @Transactional
+    public VeiculoResponseDTO criar(VeiculoDTO dto) {
         if (veiculoRepository.existsByPlaca(dto.getPlaca())) {
-            throw new RuntimeException("Já existe um veículo cadastrado com a placa " + dto.getPlaca());
+            throw new RuntimeException("Já existe um veículo cadastrado com a placa: " + dto.getPlaca());
         }
-        Veiculo veiculo = toEntity(dto);
-        Veiculo salvo = veiculoRepository.save(veiculo);
-        return toDTO(salvo);
 
-    }
-    public void deletar(Long id){
-        Veiculo veiculo = veiculoRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("veiculo nao encontrado"));
-        Cliente cliente = veiculo.getCliente();
-        if(cliente != null){
-            cliente.getVeiculos().remove(veiculo);
-        }
-        veiculoRepository.delete(veiculo);
-    }
-    public VeiculoDTO buscar(Long id){
-        Veiculo veiculo = veiculoRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("veiculo nao encontrado"));
-        return toDTO(veiculo);
-    }
-    public List<VeiculoDTO> listarTodos(){
-        return veiculoRepository.findAll()
-                .stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
+        Cliente cliente = clienteRepository.findById(dto.getClienteId())
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado com id: " + dto.getClienteId()));
 
+        Veiculo veiculo = veiculoMapper.toEntity(dto);
+        veiculo.setCliente(cliente);
+        cliente.getVeiculos().add(veiculo);
+
+        return veiculoMapper.toResponseDTO(veiculoRepository.save(veiculo));
     }
 
-    public VeiculoDTO atualizar(Long id,VeiculoDTO dto){
-        Veiculo veiculo = veiculoRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("veiculo nao encontrado"));
-        veiculo.setPlaca(dto.getPlaca());
-        veiculo.setAno(dto.getAno());
-        veiculo.setMarca(dto.getMarca());
-        veiculo.setModelo(dto.getModelo());
-        veiculo.setCor(dto.getCor());
-        Cliente clienteNovo = null;
-        if(dto.getClienteId() != null){
-            clienteNovo = clienteRepository.findById(dto.getClienteId())
-                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+    @Transactional
+    public VeiculoResponseDTO atualizar(Long id, VeiculoDTO dto) {
+        Veiculo veiculo = buscarPorId(id);
+
+        if (!veiculo.getPlaca().equals(dto.getPlaca()) && veiculoRepository.existsByPlaca(dto.getPlaca())) {
+            throw new RuntimeException("Já existe um veículo cadastrado com a placa: " + dto.getPlaca());
         }
+
+        Cliente clienteNovo = clienteRepository.findById(dto.getClienteId())
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado com id: " + dto.getClienteId()));
+
         Cliente clienteAtual = veiculo.getCliente();
-        if(clienteAtual != null && clienteAtual != clienteNovo){
+        if (clienteAtual != null && !clienteAtual.getId().equals(clienteNovo.getId())) {
             clienteAtual.getVeiculos().remove(veiculo);
         }
-        veiculo.setCliente(clienteNovo);
-        if(clienteNovo != null){
-            clienteNovo.getVeiculos().add(veiculo);
-        }
-        Veiculo salvo = veiculoRepository.save(veiculo);
-        return toDTO(salvo);
 
+        veiculo.setPlaca(dto.getPlaca());
+        veiculo.setAno(dto.getAno());
+        veiculo.setMarca(dto.getMarca());
+        veiculo.setModelo(dto.getModelo());
+        veiculo.setCor(dto.getCor());
+        veiculo.setCliente(clienteNovo);
+        clienteNovo.getVeiculos().add(veiculo);
+
+        return veiculoMapper.toResponseDTO(veiculoRepository.save(veiculo));
+    }
+
+    @Transactional(readOnly = true)
+    public VeiculoResponseDTO buscar(Long id) {
+        return veiculoMapper.toResponseDTO(buscarPorId(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<VeiculoResponseDTO> listarTodos() {
+        return veiculoRepository.findAll()
+                .stream()
+                .map(veiculoMapper::toResponseDTO)
+                .toList();
+    }
+
+    @Transactional
+    public void deletar(Long id) {
+        Veiculo veiculo = buscarPorId(id);
+
+        Cliente cliente = veiculo.getCliente();
+        if (cliente != null) {
+            cliente.getVeiculos().remove(veiculo);
+        }
+
+        veiculoRepository.delete(veiculo);
+    }
+
+    private Veiculo buscarPorId(Long id) {
+        return veiculoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Veículo não encontrado com id: " + id));
     }
 }

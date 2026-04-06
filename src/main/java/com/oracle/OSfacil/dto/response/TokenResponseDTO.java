@@ -1,4 +1,4 @@
-package com.oracle.OSfacil.dto;
+package com.oracle.OSfacil.dto.response;
 
 import lombok.Data;
 

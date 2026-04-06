@@ -1,23 +1,16 @@
-package com.oracle.OSfacil.dto;
+package com.oracle.OSfacil.dto.request;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import com.oracle.OSfacil.model.Veiculo;
-import jakarta.persistence.Column;
-import jakarta.persistence.OneToOne;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import org.hibernate.validator.constraints.br.CPF;
 import org.springframework.hateoas.RepresentationModel;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Data
 public class ClienteDTO extends RepresentationModel<ClienteDTO> {
-    private Long id;
     @NotBlank(message = "O nome não pode estar vazio")
     private String nome;
     @NotBlank(message = "O cpf não pode estar vazio")

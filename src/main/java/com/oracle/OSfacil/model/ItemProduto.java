@@ -21,7 +21,7 @@ public class ItemProduto {
     private Produto produto;
     @Column(nullable = false)
     private Integer quantidade;
-    @Column(nullable = false,name = "valorUnitario")
+    @Column(nullable = false,name = "valor_unitario")
     private BigDecimal valorUnitario;
     @Column(nullable = false)
     private BigDecimal subtotal;

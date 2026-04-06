@@ -1,11 +1,15 @@
 package com.oracle.OSfacil.service;
 
-
-import com.oracle.OSfacil.dto.FuncionarioDTO;
+import com.oracle.OSfacil.dto.request.FuncionarioDTO;
+import com.oracle.OSfacil.dto.response.FuncionarioResponseDTO;
+import com.oracle.OSfacil.enums.Role;
+import com.oracle.OSfacil.mapper.FuncionarioMapper;
 import com.oracle.OSfacil.model.Funcionario;
 import com.oracle.OSfacil.repository.FuncionarioRepository;
 import lombok.AllArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -13,69 +17,77 @@ import java.util.stream.Collectors;
 @Service
 @AllArgsConstructor
 public class FuncionarioService {
-    private final FuncionarioRepository funcionarioRepository;
 
-    public FuncionarioDTO criar (FuncionarioDTO dto){
-        Funcionario funcionario = toEntity(dto);
-        Funcionario salvo = funcionarioRepository.save(funcionario);
-        return toDTO(salvo);
+    private final FuncionarioRepository funcionarioRepository;
+    private final FuncionarioMapper funcionarioMapper;
+    private final PasswordEncoder passwordEncoder;
+
+    @Transactional
+    public FuncionarioResponseDTO criar(FuncionarioDTO dto) {
+        if (funcionarioRepository.existsByCpf(dto.getCpf())) {
+            throw new RuntimeException("CPF já cadastrado para outro funcionário!");
+        }
+        if (funcionarioRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("E-mail já cadastrado para outro funcionário!");
+        }
+        if (funcionarioRepository.existsByLogin(dto.getLogin())) {
+            throw new RuntimeException("Login já cadastrado para outro funcionário!");
+        }
+
+        Funcionario funcionario = funcionarioMapper.toEntity(dto);
+        funcionario.setSenha(passwordEncoder.encode(dto.getSenha()));
+        funcionario.setRole(Role.ROLE_FUNCIONARIO);
+
+        return funcionarioMapper.toResponseDTO(funcionarioRepository.save(funcionario));
     }
-    public FuncionarioDTO atualizar (FuncionarioDTO dto,Long id){
-        Funcionario funcionario = funcionarioRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("Funcionario nao encontrado"));
+
+    @Transactional
+    public FuncionarioResponseDTO atualizar(FuncionarioDTO dto, Long id) {
+        Funcionario funcionario = buscarPorId(id);
+
+        if (!funcionario.getCpf().equals(dto.getCpf()) && funcionarioRepository.existsByCpf(dto.getCpf())) {
+            throw new RuntimeException("CPF já cadastrado para outro funcionário!");
+        }
+        if (!funcionario.getEmail().equals(dto.getEmail()) && funcionarioRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("E-mail já cadastrado para outro funcionário!");
+        }
+        if (!funcionario.getLogin().equals(dto.getLogin()) && funcionarioRepository.existsByLogin(dto.getLogin())) {
+            throw new RuntimeException("Login já cadastrado para outro funcionário!");
+        }
+
         funcionario.setNome(dto.getNome());
         funcionario.setEmail(dto.getEmail());
         funcionario.setCpf(dto.getCpf());
         funcionario.setSalario(dto.getSalario());
         funcionario.setLogin(dto.getLogin());
-        funcionario.setSenha(dto.getSenha());
-        funcionario.setCargo(dto.getCargo());
 
-        Funcionario atualizado = funcionarioRepository.save(funcionario);
-        return toDTO(atualizado);
+        if (dto.getSenha() != null && !dto.getSenha().isBlank()) {
+            funcionario.setSenha(passwordEncoder.encode(dto.getSenha()));
+        }
+
+        return funcionarioMapper.toResponseDTO(funcionarioRepository.save(funcionario));
     }
 
-    public List<FuncionarioDTO> listarTodos(){
+    @Transactional(readOnly = true)
+    public List<FuncionarioResponseDTO> listarTodos() {
         return funcionarioRepository.findAll()
                 .stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-
-    }
-    public FuncionarioDTO listarPorId(Long id){
-        Funcionario funcionario = funcionarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Funcionario nao encontrado"));
-        return toDTO(funcionario);
-    }
-    public void deletarPorId(Long id){
-        Funcionario funcionario  = funcionarioRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Funcionario nao encontrado"));
-        funcionarioRepository.delete(funcionario);
+                .map(funcionarioMapper::toResponseDTO)
+                .toList();
     }
 
-    private FuncionarioDTO toDTO(Funcionario salvo) {
-        FuncionarioDTO dto = new FuncionarioDTO();
-        dto.setId(salvo.getId());
-        dto.setNome(salvo.getNome());
-        dto.setCpf(salvo.getCpf());
-        dto.setEmail(salvo.getEmail());
-        dto.setCargo(salvo.getCargo());
-        dto.setLogin(salvo.getLogin());
-        dto.setSenha(salvo.getSenha());
-        dto.setSalario(salvo.getSalario());
-        return dto;
+    @Transactional(readOnly = true)
+    public FuncionarioResponseDTO listarPorId(Long id) {
+        return funcionarioMapper.toResponseDTO(buscarPorId(id));
     }
 
-    private Funcionario toEntity(FuncionarioDTO dto) {
-        Funcionario funcionario = new Funcionario();
-        funcionario.setNome(dto.getNome());
-        funcionario.setCpf(dto.getCpf());
-        funcionario.setEmail(dto.getEmail());
-        funcionario.setCargo(dto.getCargo());
-        funcionario.setLogin(dto.getLogin());
-        funcionario.setSenha(dto.getSenha());
-        funcionario.setSalario(dto.getSalario());
-        return funcionario;
+    @Transactional
+    public void deletarPorId(Long id) {
+        funcionarioRepository.delete(buscarPorId(id));
     }
 
+    private Funcionario buscarPorId(Long id) {
+        return funcionarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Funcionário não encontrado com id: " + id));
+    }
 }

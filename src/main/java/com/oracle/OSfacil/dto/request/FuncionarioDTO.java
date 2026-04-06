@@ -1,6 +1,6 @@
-package com.oracle.OSfacil.dto;
+package com.oracle.OSfacil.dto.request;
 
-import com.oracle.OSfacil.enums.Cargo;
+import com.oracle.OSfacil.enums.Role;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -12,7 +12,6 @@ import java.math.BigDecimal;
 
 @Data
 public class FuncionarioDTO {
-    private Long id;
     @NotBlank(message = "O nome não pode ser vazio")
     private String nome;
     @NotBlank(message = "O CPF não pode estar vazio")
@@ -30,5 +29,5 @@ public class FuncionarioDTO {
     @NotBlank(message = "A senha não pode estar vazio")
     private String senha;
     @NotNull(message = "O cargo não pode ser vazio")
-    private Cargo cargo;
+    private Role role;
 }

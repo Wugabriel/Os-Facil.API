@@ -1,18 +1,21 @@
 package com.oracle.OSfacil.service;
 
 
-import com.oracle.OSfacil.dto.ClienteDTO;
+import com.oracle.OSfacil.dto.request.ClienteDTO;
+import com.oracle.OSfacil.dto.response.ClienteResponseDTO;
+import com.oracle.OSfacil.enums.Role;
+import com.oracle.OSfacil.mapper.ClienteMapper;
 import com.oracle.OSfacil.model.Cliente;
 import com.oracle.OSfacil.model.Veiculo;
 import com.oracle.OSfacil.repository.ClienteRepository;
 import com.oracle.OSfacil.repository.VeiculoRepository;
 import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
@@ -23,99 +26,79 @@ import java.util.stream.Collectors;
 public class ClienteService implements UserDetailsService {
 
     private final ClienteRepository clienteRepository;
-    private final VeiculoRepository veiculoRepository;
+    private final ClienteMapper clienteMapper;
+    private final PasswordEncoder passwordEncoder;
 
-    private ClienteDTO toDTO(Cliente cliente){
-        ClienteDTO dto = new ClienteDTO();
-        dto.setId(cliente.getId());
-        dto.setNome(cliente.getNome());
-        dto.setEmail(cliente.getEmail());
-        dto.setTelefone(cliente.getTelefone());
-        dto.setCpf(cliente.getCpf());
-        dto.setSenha(cliente.getSenha());
-        dto.setEndereco(cliente.getEndereco());
-        if (cliente.getVeiculos() != null && !cliente.getVeiculos().isEmpty()) {
-            Set<Long> veiculoIds = cliente.getVeiculos().stream()
-                    .map(Veiculo::getId)
-                    .collect(Collectors.toSet());
-            dto.setVeiculoIds(veiculoIds);
-        }
-        return dto;
-    }
-    private Cliente toEntity(ClienteDTO dto){
-        Cliente cliente = new Cliente();
-        cliente.setId(dto.getId());
-        cliente.setNome(dto.getNome());
-        cliente.setEmail(dto.getEmail());
-        cliente.setTelefone(dto.getTelefone());
-        cliente.setCpf(dto.getCpf());
-        cliente.setSenha( dto.getSenha());
-        cliente.setEndereco(dto.getEndereco());
-        if (dto.getVeiculoIds() != null && !dto.getVeiculoIds().isEmpty()) {
-            Set<Veiculo> veiculos = dto.getVeiculoIds().stream()
-                    .map(id -> veiculoRepository.findById(id)
-                            .orElseThrow(() -> new RuntimeException("Veículo não encontrado: " + id)))
-                    .collect(Collectors.toSet());
-            veiculos.forEach(v -> v.setCliente(cliente));
-
-            cliente.getVeiculos().addAll(veiculos);
-        }
-        return cliente;
-    }
-
-    public ClienteDTO criar (ClienteDTO dto){
+    @Transactional
+    public ClienteResponseDTO criar(ClienteDTO dto) {
         if (clienteRepository.existsByCpf(dto.getCpf())) {
             throw new RuntimeException("CPF já cadastrado para outro cliente!");
         }
         if (clienteRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("E-mail já cadastrado para outro cliente!");
         }
-        Cliente cliente = toEntity(dto);
-        Cliente salvo = clienteRepository.save(cliente);
-        return toDTO(salvo);
-    }
-    public List<ClienteDTO> listarTodos(){
-       return clienteRepository.findAllWithVeiculos()
-               .stream()
-               .map(this::toDTO)
-               .collect(Collectors.toList());
-    }
-    public ClienteDTO listarPorId(Long id){
-        Cliente cliente = clienteRepository.findByIdWithVeiculos(id)
-                .orElseThrow(()->new RuntimeException("Cliente nao encontrado"));
-        return toDTO(cliente);
+
+        Cliente cliente = clienteMapper.toEntity(dto);
+        cliente.setSenha(passwordEncoder.encode(dto.getSenha()));
+        cliente.setRole(Role.ROLE_CLIENTE);
+
+        return clienteMapper.toResponseDTO(clienteRepository.save(cliente));
     }
 
-    public ClienteDTO atualizar(Long id, ClienteDTO dto){
-        Cliente cliente = clienteRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("Cliente nao encontrado"));
+    @Transactional(readOnly = true)
+    public List<ClienteResponseDTO> listarTodos() {
+        return clienteRepository.findAllWithVeiculos()
+                .stream()
+                .map(clienteMapper::toResponseDTO)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ClienteResponseDTO listarPorId(Long id) {
+        return clienteMapper.toResponseDTO(
+                clienteRepository.findByIdWithVeiculos(id)
+                        .orElseThrow(() -> new RuntimeException("Cliente não encontrado com id: " + id))
+        );
+    }
+
+    @Transactional
+    public ClienteResponseDTO atualizar(Long id, ClienteDTO dto) {
+        Cliente cliente = buscarPorId(id);
+
+        if (!cliente.getCpf().equals(dto.getCpf()) && clienteRepository.existsByCpf(dto.getCpf())) {
+            throw new RuntimeException("CPF já cadastrado para outro cliente!");
+        }
+
+        if (!cliente.getEmail().equals(dto.getEmail()) && clienteRepository.existsByEmail(dto.getEmail())) {
+            throw new RuntimeException("E-mail já cadastrado para outro cliente!");
+        }
+
         cliente.setNome(dto.getNome());
         cliente.setEmail(dto.getEmail());
         cliente.setTelefone(dto.getTelefone());
-        cliente.setSenha(dto.getSenha());
         cliente.setCpf(dto.getCpf());
         cliente.setEndereco(dto.getEndereco());
-        if (dto.getVeiculoIds() != null && !dto.getVeiculoIds().isEmpty()) {
-            Set<Veiculo> veiculos = dto.getVeiculoIds().stream()
-                    .map(vid -> veiculoRepository.findById(vid)
-                            .orElseThrow(() -> new RuntimeException("Veículo não encontrado: " + vid)))
-                    .collect(Collectors.toSet());
-            veiculos.forEach(v -> v.setCliente(cliente));
-            cliente.getVeiculos().addAll(veiculos);
-        };
 
-        Cliente atualizado = clienteRepository.save(cliente);
-        return toDTO(atualizado);
+        if (dto.getSenha() != null && !dto.getSenha().isBlank()) {
+            cliente.setSenha(passwordEncoder.encode(dto.getSenha()));
+        }
+
+        return clienteMapper.toResponseDTO(clienteRepository.save(cliente));
     }
-    public void deletar(Long id){
-        Cliente cliente = clienteRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("Cliente nao encontrado"));
-        clienteRepository.delete(cliente);
+
+    @Transactional
+    public void deletar(Long id) {
+        clienteRepository.delete(buscarPorId(id));
     }
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return clienteRepository.findByEmailIgnoreCase(username)
-                .orElseThrow(()->new UsernameNotFoundException("cliente não encontrado"));
+                .orElseThrow(() -> new UsernameNotFoundException("Cliente não encontrado com email: " + username));
+    }
+
+    private Cliente buscarPorId(Long id) {
+        return clienteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cliente não encontrado com id: " + id));
     }
 }

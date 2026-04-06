@@ -2,12 +2,14 @@ package com.oracle.OSfacil.model;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.oracle.OSfacil.enums.Role;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.io.Serializable;
@@ -38,10 +40,12 @@ public class Cliente implements UserDetails {
     private String telefone;
     @Column(nullable = false)
     private String endereco;
+    @Enumerated(EnumType.STRING)
+    private Role role;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return new ArrayList<>();
+        return List.of(new SimpleGrantedAuthority(role.name()));
     }
 
     @Override

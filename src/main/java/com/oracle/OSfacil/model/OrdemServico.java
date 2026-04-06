@@ -1,12 +1,13 @@
 package com.oracle.OSfacil.model;
 
 
-import com.oracle.OSfacil.enums.Status;
+import com.oracle.OSfacil.enums.StatusOrdemServico;
 import com.oracle.OSfacil.enums.StatusPagamento;
 import jakarta.persistence.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Entity
 @Data
@@ -21,7 +22,7 @@ public class OrdemServico {
     private Cliente cliente;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status;
+    private StatusOrdemServico statusOrdemServico;
     @Column(nullable = false)
     private String descricao;
     @Column(nullable = false,name = "statusPagamento")
@@ -29,4 +30,6 @@ public class OrdemServico {
     private StatusPagamento statusPagamento;
     @Column(nullable = false)
     private BigDecimal valor;
+    @OneToMany(mappedBy = "ordemServico")
+    private List<ItemProduto> itens;
 }

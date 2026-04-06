@@ -1,6 +1,6 @@
 package com.oracle.OSfacil.enums;
 
-public enum Status {
+public enum StatusOrdemServico {
     ABERTA,
     CONCLUIDA,
     CANCELADA,

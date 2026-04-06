@@ -1,67 +1,61 @@
 package com.oracle.OSfacil.service;
 
-
-import com.oracle.OSfacil.dto.ProdutoDTO;
+import com.oracle.OSfacil.dto.request.ProdutoDTO;
+import com.oracle.OSfacil.dto.response.ProdutoResponseDTO;
+import com.oracle.OSfacil.mapper.ProdutoMapper;
 import com.oracle.OSfacil.model.Produto;
 import com.oracle.OSfacil.repository.ProdutoRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @AllArgsConstructor
 public class ProdutoService {
-    private ProdutoRepository produtoRepository;
 
-    private ProdutoDTO toDTO(Produto produto){
-        ProdutoDTO dto = new ProdutoDTO();
-        dto.setId(produto.getId());
-        dto.setNome(produto.getNome());
-        dto.setPreco(produto.getPreco());
-        dto.setQuantidade(produto.getQuantidade());
-        return dto;
+    private final ProdutoRepository produtoRepository;
+    private final ProdutoMapper produtoMapper;
+
+    @Transactional
+    public ProdutoResponseDTO criar(ProdutoDTO dto) {
+        return produtoMapper.toResponseDTO(
+                produtoRepository.save(produtoMapper.toEntity(dto))
+        );
     }
-    private Produto toEntity(ProdutoDTO dto){
-        Produto produto = new Produto();
+
+    @Transactional
+    public ProdutoResponseDTO atualizar(Long id, ProdutoDTO dto) {
+        Produto produto = buscarPorId(id);
+
         produto.setNome(dto.getNome());
         produto.setPreco(dto.getPreco());
         produto.setQuantidade(dto.getQuantidade());
-        return produto;
+
+        return produtoMapper.toResponseDTO(produtoRepository.save(produto));
     }
 
-    public ProdutoDTO criar(ProdutoDTO dto){
-        Produto produto = toEntity(dto);
-        produtoRepository.save(produto);
-        return toDTO(produto);
-    }
-    public void deletar(Long id){
-        Produto produto = produtoRepository.findById(id)
-                .orElseThrow(()-> new RuntimeException("produto nao encontrado"));
-        produtoRepository.delete(produto);
-    }
-    public ProdutoDTO atualizar(Long id, ProdutoDTO dto){
-        Produto produto = produtoRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("produto nao encontrado"));
-
-        produto.setNome(produto.getNome());
-        produto.setPreco(produto.getPreco());
-        produto.setQuantidade(produto.getQuantidade());
-        Produto salvo = produtoRepository.save(produto);
-        return toDTO(salvo);
-
-    }
-    public List<ProdutoDTO> listarTodos(){
+    @Transactional(readOnly = true)
+    public List<ProdutoResponseDTO> listarTodos() {
         return produtoRepository.findAll()
                 .stream()
-                .map(this::toDTO)
-                .collect(Collectors.toList());
-    }
-    public ProdutoDTO buscar(Long id){
-        Produto produto = produtoRepository.findById(id)
-                .orElseThrow(()->new RuntimeException("produto nao encontrado"));
-        return toDTO(produto);
+                .map(produtoMapper::toResponseDTO)
+                .toList();
     }
 
+    @Transactional(readOnly = true)
+    public ProdutoResponseDTO buscar(Long id) {
+        return produtoMapper.toResponseDTO(buscarPorId(id));
+    }
+
+    @Transactional
+    public void deletar(Long id) {
+        produtoRepository.delete(buscarPorId(id));
+    }
+
+    private Produto buscarPorId(Long id) {
+        return produtoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Produto não encontrado com id: " + id));
+    }
 }
