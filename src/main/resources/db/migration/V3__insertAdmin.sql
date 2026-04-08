@@ -1,4 +1,4 @@
-INSERT INTO tb_funcionario (id, nome, cpf, email, login, senha, salario, role)
+INSERT INTO tb_funcionario (id, nome, cpf, email, login, senha, salario, "ROLE")
 VALUES (
   funcionario_generator.NEXTVAL,
   'Admin',
