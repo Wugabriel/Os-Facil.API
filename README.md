@@ -59,12 +59,11 @@ CORS_ALLOWED_ORIGINS=http://localhost:4200,http://localhost:3000
 ```
 
 > O arquivo `.env` é carregado automaticamente pelo `dotenv-java`.  
-> **Nunca o adicione ao controle de versão.**
+
 
 ### 2. Porta
 
 A aplicação sobe na porta **8081** por padrão.  
-Para alterar, edite `src/main/resources/application.properties`:
 
 ```properties
 server.port=8081
@@ -75,11 +74,10 @@ server.port=8081
 ## Executando
 
 ```bash
-# Com Maven Wrapper (recomendado)
+# Com Maven Wrapper 
 ./mvnw spring-boot:run
 
-# Ou com Maven instalado globalmente
-mvn spring-boot:run
+
 ```
 
 - **API:** `http://localhost:8081`
@@ -89,8 +87,6 @@ mvn spring-boot:run
 
 ## Primeiro acesso — Admin padrão
 
-Ao iniciar pela primeira vez, o `DataInitializer` verifica se existe algum administrador.  
-Caso não exista, ele cria automaticamente:
 
 | Campo | Valor |
 |---|---|
@@ -98,10 +94,6 @@ Caso não exista, ele cria automaticamente:
 | Senha | `Admin@123` |
 | Role | `ROLE_ADMIN` |
 
-O inicializador também **detecta e corrige senhas em texto puro** já existentes no banco,  
-re-encodando-as com BCrypt automaticamente na inicialização.
-
-> Troque a senha após o primeiro login.
 
 ---
 
