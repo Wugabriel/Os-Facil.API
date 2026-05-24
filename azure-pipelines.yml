@@ -1,4 +1,4 @@
-﻿trigger:
+trigger:
   branches:
     include:
       - main
@@ -9,7 +9,7 @@ stages:
     jobs:
       - job: Build
         pool:
-          vmImage: ubuntu-latest
+          name: Default
         steps:
           - task: Maven@4
             displayName: Maven Test
@@ -35,7 +35,7 @@ stages:
     jobs:
       - job: Deploy
         pool:
-          vmImage: ubuntu-latest
+          name: Default
         steps:
           - task: AzureWebAppContainer@1
             displayName: Deploy Container
