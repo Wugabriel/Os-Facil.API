@@ -1,0 +1,45 @@
+﻿trigger:
+  branches:
+    include:
+      - main
+
+stages:
+  - stage: CI
+    displayName: Build and Push
+    jobs:
+      - job: Build
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: Maven@4
+            displayName: Maven Test
+            inputs:
+              mavenPomFile: pom.xml
+              goals: test
+              publishJUnitResults: true
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+
+          - task: Docker@2
+            displayName: Build and Push to ACR
+            inputs:
+              containerRegistry: ACRConnection
+              repository: osfacil
+              command: buildAndPush
+              Dockerfile: Dockerfile
+              tags: latest
+
+  - stage: CD
+    displayName: Deploy to Azure
+    dependsOn: CI
+    condition: succeeded()
+    jobs:
+      - job: Deploy
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: AzureWebAppContainer@1
+            displayName: Deploy Container
+            inputs:
+              azureSubscription: AzureConnection
+              appName: osfacil-webapp-mr560210
+              containers: osfacilmr560210.azurecr.io/osfacil:latest
