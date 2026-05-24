@@ -3,12 +3,16 @@ package com.oracle.OSfacil.controller;
 
 import com.oracle.OSfacil.dto.request.VeiculoDTO;
 import com.oracle.OSfacil.dto.response.VeiculoResponseDTO;
+import com.oracle.OSfacil.infra.exeception.RegraDeNegocioException;
+import com.oracle.OSfacil.model.Cliente;
 import com.oracle.OSfacil.service.VeiculoService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -26,7 +30,14 @@ public class VeiculoController {
 
     @PostMapping
     public ResponseEntity<EntityModel<VeiculoResponseDTO>> criar(
-            @Valid @RequestBody VeiculoDTO dto) {
+            @Valid @RequestBody VeiculoDTO dto,
+            @AuthenticationPrincipal UserDetails principal) {
+
+        if (principal instanceof Cliente cliente) {
+            dto.setClienteId(cliente.getId());
+        } else if (dto.getClienteId() == null) {
+            throw new RegraDeNegocioException("O Id do cliente não pode ser vazio");
+        }
 
         VeiculoResponseDTO novoVeiculo = veiculoService.criar(dto);
 
@@ -78,7 +89,14 @@ public class VeiculoController {
     @PutMapping("/{id}")
     public ResponseEntity<EntityModel<VeiculoResponseDTO>> atualizar(
             @PathVariable Long id,
-            @Valid @RequestBody VeiculoDTO dto) {
+            @Valid @RequestBody VeiculoDTO dto,
+            @AuthenticationPrincipal UserDetails principal) {
+
+        if (principal instanceof Cliente cliente) {
+            dto.setClienteId(cliente.getId());
+        } else if (dto.getClienteId() == null) {
+            throw new RegraDeNegocioException("O Id do cliente não pode ser vazio");
+        }
 
         VeiculoResponseDTO atualizado = veiculoService.atualizar(id, dto);
 

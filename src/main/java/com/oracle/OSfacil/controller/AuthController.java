@@ -39,10 +39,12 @@ public class AuthController {
         response.setTokenAcesso(tokenService.gerarToken(usuarioLogado));
 
         if (usuarioLogado instanceof Cliente c) {
+            response.setId(c.getId());
             response.setNome(c.getNome());
             response.setEmail(c.getEmail());
             response.setRole(c.getRole().name());
         } else if (usuarioLogado instanceof Funcionario f) {
+            response.setId(f.getId());
             response.setNome(f.getNome());
             response.setEmail(f.getEmail());
             response.setRole(f.getRole().name());
