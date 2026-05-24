@@ -29,7 +29,7 @@ Desenvolvida com **Spring Boot 3**, **Spring Security 6 + JWT**, **Oracle Databa
 
 ## Pré-requisitos
 
-- **JDK 22** instalado e `JAVA_HOME` configurado
+- **JDK 22** instalado e `JAVA_HOME` configurado.
 - **Maven 3.9+** (ou usar o wrapper `./mvnw` incluído no projeto)
 - **Oracle Database** acessível (local ou nuvem FIAP)
 - Conta **Groq** para o assistente de IA (opcional)
