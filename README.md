@@ -40,7 +40,7 @@ Desenvolvida com **Spring Boot 3**, **Spring Security 6 + JWT**, **Oracle Databa
 
 ### 1. Variáveis de ambiente
 
-Crie um arquivo `.env` na raiz do projeto (mesmo nível do `pom.xml`):
+Crie um arquivo `.env` na raiz do projeto (mesmo nível do `pom.xml`):.
 
 ```env
 # Banco de dados Oracle
