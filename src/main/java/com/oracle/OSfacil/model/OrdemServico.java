@@ -22,6 +22,10 @@ public class OrdemServico {
     @ManyToOne()
     @JoinColumn(name = "cliente_id",nullable = false)
     private Cliente cliente;
+
+    @ManyToOne
+    @JoinColumn(name = "funcionario_id", nullable = true)
+    private Funcionario funcionario;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusOrdemServico statusOrdemServico;

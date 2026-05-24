@@ -7,8 +7,10 @@ import com.oracle.OSfacil.enums.StatusPagamento;
 import com.oracle.OSfacil.infra.exeception.RegraDeNegocioException;
 import com.oracle.OSfacil.mapper.OrdemServicoMapper;
 import com.oracle.OSfacil.model.Cliente;
+import com.oracle.OSfacil.model.Funcionario;
 import com.oracle.OSfacil.model.OrdemServico;
 import com.oracle.OSfacil.repository.ClienteRepository;
+import com.oracle.OSfacil.repository.FuncionarioRepository;
 import com.oracle.OSfacil.repository.OrdemServicoRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class OrdemServicoService {
 
     private final OrdemServicoRepository ordemServicoRepository;
     private final ClienteRepository clienteRepository;
+    private final FuncionarioRepository funcionarioRepository;
     private final OrdemServicoMapper ordemServicoMapper;
 
     @Transactional
@@ -50,6 +53,15 @@ public class OrdemServicoService {
         os.setDescricao(dto.getDescricao());
         os.setStatusPagamento(dto.getStatusPagamento());
         os.setStatusOrdemServico(dto.getStatusOrdemServico());
+
+        if (dto.getFuncionarioId() != null) {
+            Funcionario funcionario = funcionarioRepository.findById(dto.getFuncionarioId())
+                    .orElseThrow(() -> new RegraDeNegocioException(
+                            "Funcionario nao encontrado com id: " + dto.getFuncionarioId()));
+            os.setFuncionario(funcionario);
+        } else {
+            os.setFuncionario(null);
+        }
 
         return ordemServicoMapper.toResponseDTO(ordemServicoRepository.save(os));
     }

@@ -13,6 +13,8 @@ public class OrdemServicoResponseDTO {
     private Long id;
     private Long clienteId;
     private String nomeCliente;
+    private Long funcionarioId;
+    private String nomeResponsavel;
     private StatusOrdemServico statusOrdemServico;
     private String descricao;
     private StatusPagamento statusPagamento;

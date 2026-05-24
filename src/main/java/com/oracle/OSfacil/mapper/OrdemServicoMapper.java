@@ -3,8 +3,10 @@ package com.oracle.OSfacil.mapper;
 import com.oracle.OSfacil.dto.request.OrdemServicoDTO;
 import com.oracle.OSfacil.dto.response.OrdemServicoResponseDTO;
 import com.oracle.OSfacil.model.Cliente;
+import com.oracle.OSfacil.model.Funcionario;
 import com.oracle.OSfacil.model.OrdemServico;
 import com.oracle.OSfacil.repository.ClienteRepository;
+import com.oracle.OSfacil.repository.FuncionarioRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 public class OrdemServicoMapper {
 
     private final ClienteRepository clienteRepository;
+    private final FuncionarioRepository funcionarioRepository;
     private final ItemProdutoMapper itemProdutoMapper;
 
     public OrdemServicoResponseDTO toResponseDTO(OrdemServico ordemServico) {
@@ -28,6 +31,11 @@ public class OrdemServicoMapper {
         if (ordemServico.getCliente() != null) {
             dto.setClienteId(ordemServico.getCliente().getId());
             dto.setNomeCliente(ordemServico.getCliente().getNome());
+        }
+
+        if (ordemServico.getFuncionario() != null) {
+            dto.setFuncionarioId(ordemServico.getFuncionario().getId());
+            dto.setNomeResponsavel(ordemServico.getFuncionario().getNome());
         }
 
         if (ordemServico.getItens() != null) {
@@ -57,6 +65,12 @@ public class OrdemServicoMapper {
                     .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
 
             ordemServico.setCliente(cliente);
+        }
+
+        if (dto.getFuncionarioId() != null) {
+            Funcionario funcionario = funcionarioRepository.findById(dto.getFuncionarioId())
+                    .orElseThrow(() -> new RuntimeException("Funcionário não encontrado"));
+            ordemServico.setFuncionario(funcionario);
         }
 
         return ordemServico;

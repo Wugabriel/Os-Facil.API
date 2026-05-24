@@ -52,6 +52,7 @@ public class ConfiguracaoSeguranca {
                         .requestMatchers(HttpMethod.GET, "/pagamentos/**").hasAnyRole("CLIENTE", "FUNCIONARIO", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/pagamentos/**").hasAnyRole("CLIENTE", "FUNCIONARIO", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/veiculos/**").hasAnyRole("CLIENTE", "FUNCIONARIO", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/veiculos/**").hasAnyRole("CLIENTE", "FUNCIONARIO", "ADMIN")
 
                         .requestMatchers("/ordem-servicos/**").hasAnyRole("FUNCIONARIO", "ADMIN")
                         .requestMatchers("/clientes/**").hasAnyRole("FUNCIONARIO", "ADMIN")
